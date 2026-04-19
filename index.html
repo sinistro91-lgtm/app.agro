@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<title>Gestão Agrícola</title>
+<style>
+body{font-family:Arial;margin:0;background:#f4f4f4}
+header{background:#2e7d32;color:#fff;padding:10px;text-align:center}
+nav{display:flex;gap:5px;background:#1b5e20;padding:10px;flex-wrap:wrap}
+nav button{padding:8px;border:0;background:#4caf50;color:#fff;cursor:pointer}
+section{display:none;padding:15px}
+section.active{display:block}
+input,select,textarea{width:100%;margin:4px 0;padding:5px}
+table{width:100%;border-collapse:collapse;margin-top:10px;background:#fff}
+th,td{border:1px solid #ccc;padding:6px;text-align:left}
+.actions button{margin-right:5px}
+</style>
+</head>
+<body>
+
+<header><h2>Gestão Agrícola</h2></header>
+
+<nav>
+<button onclick="show('inicio')">Início</button>
+<button onclick="show('cadastro')">Cadastro</button>
+<button onclick="show('producao')">Produção</button>
+<button onclick="show('insumos')">Insumos</button>
+<button onclick="show('financeiro')">Financeiro</button>
+<button onclick="show('relatorios')">Relatórios</button>
+</nav>
+
+<!-- INICIO -->
+<section id="inicio" class="active">
+<h3>Bem-vindo ao Sistema</h3>
+<p>Use as abas acima para navegar.</p>
+</section>
+
+<!-- CADASTRO -->
+<section id="cadastro">
+<h3>Cadastro de Fazenda</h3>
+<input id="fazendaNome" placeholder="Nome da fazenda">
+<input id="fazendaEndereco" placeholder="Endereço">
+<input id="fazendaArea" placeholder="Área total (ha)">
+<input id="fazendaTalhoes" placeholder="Talhões (ex: 30ha + 70ha)">
+<button onclick="addFazenda()">Salvar Fazenda</button>
+
+<h4>Fazendas Cadastradas</h4>
+<table id="tFazendas"></table>
+</section>
+
+<!-- PRODUÇÃO -->
+<section id="producao">
+<h3>Entrega de Produção</h3>
+<select id="prodFazenda"></select>
+<input id="prodCultura" placeholder="Cultura">
+<input id="prodSafra" placeholder="Ano Safra">
+<input id="prodNF" placeholder="NF">
+<input id="prodMotorista" placeholder="Motorista">
+<input id="prodPlaca" placeholder="Placa">
+<input id="prodPesoBruto" placeholder="Peso Bruto">
+<input id="prodDesconto" placeholder="Descontos">
+<input id="prodPesoLiquido" placeholder="Peso Líquido">
+<textarea id="prodObs" placeholder="Observações"></textarea>
+<button onclick="addProducao()">Salvar Produção</button>
+
+<table id="tProducao"></table>
+</section>
+
+<!-- INSUMOS -->
+<section id="insumos">
+<h3>Compra de Insumos</h3>
+<select id="insFazenda"></select>
+<input id="insCultura" placeholder="Cultura">
+<input id="insSafra" placeholder="Ano Safra">
+<input id="insNF" placeholder="NF">
+<input id="insEmpresa" placeholder="Empresa">
+<input id="insProduto" placeholder="Produto">
+<input id="insValor" placeholder="Valor">
+<input id="insVenc" type="date">
+<button onclick="addInsumo()">Salvar Insumo</button>
+
+<table id="tInsumos"></table>
+</section>
+
+<!-- FINANCEIRO -->
+<section id="financeiro">
+<h3>Receita / Despesa</h3>
+<select id="finTipo">
+<option value="receita">Receita</option>
+<option value="despesa">Despesa</option>
+</select>
+<select id="finFazenda"></select>
+<input id="finCategoria" placeholder="Categoria">
+<input id="finValor" placeholder="Valor">
+<select id="finStatus">
+<option value="pendente">Pendente</option>
+<option value="pago">Pago</option>
+</select>
+<input id="finVenc" type="date">
+<textarea id="finObs" placeholder="Observações"></textarea>
+<button onclick="addFinanceiro()">Salvar</button>
+
+<table id="tFinanceiro"></table>
+</section>
+
+<!-- RELATÓRIOS -->
+<section id="relatorios">
+<h3>Relatórios</h3>
+<button onclick="exportCSV()">Exportar Excel (CSV)</button>
+<button onclick="window.print()">Exportar PDF</button>
+<table id="tRelatorios"></table>
+</section>
+
+<script>
+let db = JSON.parse(localStorage.getItem("agroDB")) || {
+fazendas:[], producao:[], insumos:[], financeiro:[]
+};
+
+function save(){localStorage.setItem("agroDB",JSON.stringify(db));}
+
+function show(id){
+document.querySelectorAll("section").forEach(s=>s.classList.remove("active"));
+document.getElementById(id).classList.add("active");
+renderAll();
+}
+
+function addFazenda(){
+db.fazendas.push({
+nome:fazendaNome.value,
+end:fazendaEndereco.value,
+area:fazendaArea.value,
+talhoes:fazendaTalhoes.value
+});
+save(); renderAll();
+}
+
+function addProducao(){
+db.producao.push({
+fazenda:prodFazenda.value,cultura:prodCultura.value,
+safra:prodSafra.value,nf:prodNF.value,
+motorista:prodMotorista.value,placa:prodPlaca.value,
+pesoBruto:prodPesoBruto.value,desconto:prodDesconto.value,
+pesoLiquido:prodPesoLiquido.value,obs:prodObs.value
+});
+save(); renderAll();
+}
+
+function addInsumo(){
+db.insumos.push({
+fazenda:insFazenda.value,cultura:insCultura.value,
+safra:insSafra.value,nf:insNF.value,
+empresa:insEmpresa.value,produto:insProduto.value,
+valor:insValor.value,venc:insVenc.value
+});
+save(); renderAll();
+}
+
+function addFinanceiro(){
+db.financeiro.push({
+tipo:finTipo.value,fazenda:finFazenda.value,
+categoria:finCategoria.value,valor:finValor.value,
+status:finStatus.value,venc:finVenc.value,obs:finObs.value
+});
+save(); renderAll();
+}
+
+function renderFazendas(){
+let t="<tr><th>Nome</th><th>Área</th><th>Talhões</th></tr>";
+db.fazendas.forEach(f=>{
+t+=`<tr><td>${f.nome}</td><td>${f.area}</td><td>${f.talhoes}</td></tr>`;
+});
+tFazendas.innerHTML=t;
+
+let opts=db.fazendas.map(f=>`<option>${f.nome}</option>`).join("");
+prodFazenda.innerHTML=opts;
+insFazenda.innerHTML=opts;
+finFazenda.innerHTML=opts;
+}
+
+function tableFrom(arr,el){
+if(arr.length==0){el.innerHTML="";return;}
+let keys=Object.keys(arr[0]);
+let t="<tr>"+keys.map(k=>`<th>${k}</th>`).join("")+"</tr>";
+arr.forEach(o=>{
+t+="<tr>"+keys.map(k=>`<td>${o[k]}</td>`).join("")+"</tr>";
+});
+el.innerHTML=t;
+}
+
+function renderAll(){
+renderFazendas();
+tableFrom(db.producao,tProducao);
+tableFrom(db.insumos,tInsumos);
+tableFrom(db.financeiro,tFinanceiro);
+tableFrom([...db.producao,...db.insumos,...db.financeiro],tRelatorios);
+}
+
+function exportCSV(){
+let data=[...db.producao,...db.insumos,...db.financeiro];
+let csv=Object.keys(data[0]).join(",")+"\n";
+data.forEach(r=>{
+csv+=Object.values(r).join(",")+"\n";
+});
+let blob=new Blob([csv]);
+let a=document.createElement("a");
+a.href=URL.createObjectURL(blob);
+a.download="relatorio.csv";
+a.click();
+}
+
+renderAll();
+</script>
+</body>
+</html>
